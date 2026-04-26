@@ -1,0 +1,5 @@
+# Cursor Rules for Single-Pane-of-Glass Supervisor Dashboard
+- Read AGENTS.md, ARCH.md, and RESEARCH.md at start of session.
+- Follow TDD Iron Law.
+- Create implementation plans before coding.
+- Respect directory structure: /opt/hermes/workspace, backend/, backend/api/, backend/models/, backend/schemas/, backend/services/, backend/core/, frontend/, frontend/src/components/, frontend/src/pages/, frontend/src/services/, docs/
