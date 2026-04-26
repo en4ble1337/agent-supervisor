@@ -23,7 +23,9 @@ RUN echo 'server { \
         try_files $uri $uri/ /index.html; \
     } \
     location /api { \
-        proxy_pass http://backend:8000; \
+        resolver 127.0.0.11 valid=10s; \
+        set $backend_url http://backend:8000; \
+        proxy_pass $backend_url; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
