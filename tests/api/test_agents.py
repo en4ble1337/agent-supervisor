@@ -1,9 +1,11 @@
+import logging
 from unittest.mock import patch
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.main import app
 from backend.models.agent import Agent
 
 
@@ -94,6 +96,7 @@ async def test_create_agent_success(
     assert data["name"] == "New Agent"
     assert "id" in data
     assert "ssh_password" not in data
+    mock_validate_ssh.assert_awaited_once_with("10.0.0.3", "admin", "supersecret", raise_on_error=True)
 
 
 @pytest.mark.asyncio
@@ -113,6 +116,36 @@ async def test_create_agent_ssh_failed(mock_validate_ssh, async_client: AsyncCli
     response = await async_client.post("/api/agents", json=payload)
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "SSH_AUTH_FAILED"
+
+
+@pytest.mark.asyncio
+@patch("backend.api.agents.ssh_service.validate_connection")
+async def test_create_agent_logs_ssh_validation_exception(
+    mock_validate_ssh, db_session: AsyncSession, caplog: pytest.LogCaptureFixture
+):
+    mock_validate_ssh.side_effect = RuntimeError("asyncssh rejected user openclaw")
+
+    payload = {
+        "name": "Failed Agent",
+        "ip_address": "10.0.0.4",
+        "ssh_username": "admin",
+        "ssh_password": "wrong-password",
+        "api_endpoint": "http://10.0.0.4:8000",
+        "business_group": "Wayne Ent",
+    }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://test",
+    ) as client:
+        with caplog.at_level(logging.ERROR, logger="backend.api.agents"):
+            response = await client.post("/api/agents", json=payload)
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "SSH_AUTH_FAILED"
+    assert "asyncssh rejected user openclaw" in caplog.text
+    assert "10.0.0.4" in caplog.text
+    assert "wrong-password" not in caplog.text
 
 
 @pytest.mark.asyncio

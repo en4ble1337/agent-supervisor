@@ -8,7 +8,9 @@ logger = logging.getLogger(__name__)
 
 
 class SSHService:
-    async def validate_connection(self, ip_address: str, username: str, password: str) -> bool:
+    async def validate_connection(
+        self, ip_address: str, username: str, password: str, *, raise_on_error: bool = False
+    ) -> bool:
         """Validates SSH connection and authentication."""
         try:
             async with asyncssh.connect(
@@ -16,11 +18,14 @@ class SSHService:
                 username=username,
                 password=password,
                 known_hosts=None,
-            ):
-                pass
+                connect_timeout=10,
+            ) as conn:
+                await conn.run("true", check=True)
             return True
         except (TimeoutError, asyncssh.Error, OSError) as exc:
             logger.error(f"SSH validation failed for {ip_address}: {exc}")
+            if raise_on_error:
+                raise
             return False
 
     async def list_directory(self, ip_address: str, username: str, password: str, path: str) -> list[dict[str, str]]:

@@ -2,10 +2,28 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAgent } from '../api';
 
+const RUNTIME_DEFAULTS = [
+  {
+    name: 'OpenClaw',
+    port: 18789,
+    example: 'http://<ip>:18789',
+    note: 'Binds to 127.0.0.1 by default. Bind to 0.0.0.0 for remote access.',
+    color: '#f78166',
+  },
+  {
+    name: 'Hermes',
+    port: 8642,
+    example: 'http://<ip>:8642',
+    note: 'Port 8642 is the agent API. Port 9119 is the built-in web dashboard (do not use for this field).',
+    color: '#79c0ff',
+  },
+];
+
 const AddAgent: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDefaults, setShowDefaults] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -116,7 +134,18 @@ const AddAgent: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="api_endpoint" className="text-sm font-bold text-text">API Endpoint</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="api_endpoint" className="text-sm font-bold text-text">API Endpoint</label>
+              <button
+                type="button"
+                id="runtime-defaults-toggle"
+                onClick={() => setShowDefaults(v => !v)}
+                className="text-xs text-accent hover:text-blue-300 transition-colors flex items-center gap-1"
+              >
+                <span>{showDefaults ? '▾' : '▸'}</span>
+                Runtime Defaults
+              </button>
+            </div>
             <input
               id="api_endpoint"
               name="api_endpoint"
@@ -125,8 +154,28 @@ const AddAgent: React.FC = () => {
               value={formData.api_endpoint}
               onChange={handleChange}
               className="bg-background border border-border text-text text-sm rounded focus:ring-accent focus:border-accent block w-full p-2"
-              placeholder="e.g. http://10.0.0.5:8000"
+              placeholder="e.g. http://10.0.0.5:18789 (OpenClaw) or :8642 (Hermes)"
             />
+            {showDefaults && (
+              <div id="runtime-defaults-panel" className="mt-2 rounded border border-border bg-[#161b22] p-3 flex flex-col gap-3">
+                <p className="text-xs text-muted uppercase tracking-widest font-bold">Default API Ports by Runtime</p>
+                {RUNTIME_DEFAULTS.map(rt => (
+                  <div key={rt.name} className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs font-bold px-2 py-0.5 rounded"
+                        style={{ background: `${rt.color}22`, color: rt.color, border: `1px solid ${rt.color}55` }}
+                      >
+                        {rt.name}
+                      </span>
+                      <code className="text-xs text-text font-mono">{rt.example}</code>
+                      <span className="text-xs text-muted ml-auto">:{rt.port}</span>
+                    </div>
+                    <p className="text-xs text-muted pl-1">{rt.note}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">

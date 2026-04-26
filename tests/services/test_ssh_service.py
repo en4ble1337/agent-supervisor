@@ -18,12 +18,39 @@ async def test_validate_connection_success(mock_connect):
     result = await service.validate_connection("10.0.0.5", "admin", "password")
 
     assert result is True
+    mock_conn.run.assert_called_once_with("true", check=True)
     mock_connect.assert_called_once()
     args, kwargs = mock_connect.call_args
     assert args[0] == "10.0.0.5"
     assert kwargs["username"] == "admin"
     assert kwargs["password"] == "password"
     assert "known_hosts" in kwargs
+    assert kwargs["connect_timeout"] == 10
+
+
+@pytest.mark.asyncio
+@patch("backend.services.ssh_service.asyncssh.connect")
+async def test_validate_connection_returns_false_when_validation_command_fails(mock_connect):
+    mock_conn = AsyncMock()
+    mock_conn.run.side_effect = OSError("command execution failed")
+    mock_connect.return_value.__aenter__.return_value = mock_conn
+    mock_connect.return_value.__aexit__.return_value = None
+
+    service = SSHService()
+    result = await service.validate_connection("10.0.0.5", "admin", "password")
+
+    assert result is False
+    mock_conn.run.assert_called_once_with("true", check=True)
+
+
+@pytest.mark.asyncio
+@patch("backend.services.ssh_service.asyncssh.connect")
+async def test_validate_connection_raises_connection_error_when_requested(mock_connect):
+    mock_connect.side_effect = OSError("command execution failed")
+
+    service = SSHService()
+    with pytest.raises(OSError, match="command execution failed"):
+        await service.validate_connection("10.0.0.5", "admin", "password", raise_on_error=True)
 
 
 @pytest.mark.asyncio

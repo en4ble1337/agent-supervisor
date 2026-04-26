@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,6 +19,7 @@ from backend.services.crypto_service import CryptoService
 from backend.services.ssh_service import SSHService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # For MVP, we instantiate services directly. In a larger app, we might use dependency injection for these too.
 ssh_service = SSHService()
@@ -41,9 +43,16 @@ async def get_agents(
 @router.post("", response_model=AgentResponse, status_code=201)
 async def create_agent(agent_in: AgentCreate, db: AsyncSession = Depends(get_db)) -> Agent:
     # Validate SSH
-    is_ssh_valid = await ssh_service.validate_connection(
-        agent_in.ip_address, agent_in.ssh_username, agent_in.ssh_password
-    )
+    try:
+        is_ssh_valid = await ssh_service.validate_connection(
+            agent_in.ip_address, agent_in.ssh_username, agent_in.ssh_password, raise_on_error=True
+        )
+    except Exception as exc:
+        logger.exception("SSH validation raised for %s: %s", agent_in.ip_address, exc)
+        raise HTTPException(
+            status_code=401, detail={"code": "SSH_AUTH_FAILED", "message": "Invalid SSH credentials or unreachable"}
+        ) from exc
+
     if not is_ssh_valid:
         raise HTTPException(
             status_code=401, detail={"code": "SSH_AUTH_FAILED", "message": "Invalid SSH credentials or unreachable"}
