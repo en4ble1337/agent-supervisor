@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ChatTerminal from '../components/ChatTerminal';
@@ -11,8 +10,8 @@ vi.mock('../api', () => ({
 
 describe('ChatTerminal', () => {
   const mockHistory = [
-    { id: 'm1', role: 'user', content: 'hello', timestamp: '2026-04-24T12:00:00Z' },
-    { id: 'm2', role: 'agent', content: 'hi there', timestamp: '2026-04-24T12:00:01Z' },
+    { id: 'm1', agent_id: '123', role: 'user', content: 'hello', timestamp: '2026-04-24T12:00:00Z' },
+    { id: 'm2', agent_id: '123', role: 'agent', content: 'hi there', timestamp: '2026-04-24T12:00:01Z' },
   ];
 
   beforeEach(() => {
@@ -22,13 +21,13 @@ describe('ChatTerminal', () => {
   it('renders history and sends new message', async () => {
     vi.mocked(api.getChatHistory).mockResolvedValueOnce(mockHistory);
     vi.mocked(api.sendMessage).mockResolvedValue({
-      id: 'm3', role: 'agent', content: 'replying...', timestamp: '2026-04-24T12:00:02Z'
+      id: 'm3', agent_id: '123', role: 'agent', content: 'replying...', timestamp: '2026-04-24T12:00:02Z'
     });
     // On second fetchHistory call, return the new list
     vi.mocked(api.getChatHistory).mockResolvedValueOnce([
       ...mockHistory,
-      { id: 'm2.5', role: 'user', content: 'how are you?', timestamp: '2026-04-24T12:00:02Z' },
-      { id: 'm3', role: 'agent', content: 'replying...', timestamp: '2026-04-24T12:00:02Z' }
+      { id: 'm2.5', agent_id: '123', role: 'user', content: 'how are you?', timestamp: '2026-04-24T12:00:02Z' },
+      { id: 'm3', agent_id: '123', role: 'agent', content: 'replying...', timestamp: '2026-04-24T12:00:02Z' }
     ]);
 
     render(<ChatTerminal agentId="123" />);
