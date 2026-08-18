@@ -6,7 +6,7 @@ Implement the backend logic to send direct chat messages to agent runtimes and r
 
 ## Prerequisites
 
-- [ ] Directive 004: Agent Registry API — Complete
+- [x] Directive 004: Agent Registry API — Complete
 
 ## References
 

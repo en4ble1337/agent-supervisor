@@ -43,23 +43,40 @@ class HermesAdapter(AgentAdapter):
     async def validate_endpoint(self, endpoint: str) -> bool:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{endpoint}/status")
-                return response.status_code == 200
+                for path in ("/status", "/health", "/v1/health"):
+                    response = await client.get(_join_url(endpoint, path))
+                    if response.status_code == 200:
+                        return True
+                return False
         except Exception as e:
             logger.error(f"Hermes validation failed for {endpoint}: {e}")
             return False
 
     async def get_status(self, endpoint: str) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{endpoint}/status")
-            response.raise_for_status()
-            data = response.json()
-            # Ensure standard shape
-            return {
-                "status": data.get("status", "unknown"),
-                "active_tasks": data.get("active_tasks", []),
-                "cron_jobs": data.get("cron_jobs", []),
-            }
+            status_response = await client.get(_join_url(endpoint, "/status"))
+            if status_response.status_code == 200:
+                data = status_response.json()
+                return {
+                    "status": data.get("status", "unknown"),
+                    "active_tasks": data.get("active_tasks", []),
+                    "cron_jobs": data.get("cron_jobs", []),
+                }
+
+            last_response = status_response
+            for path in ("/health", "/v1/health"):
+                health_response = await client.get(_join_url(endpoint, path))
+                last_response = health_response
+                if health_response.status_code == 200:
+                    data = health_response.json()
+                    return {
+                        "status": data.get("status", "ok"),
+                        "active_tasks": [],
+                        "cron_jobs": [],
+                    }
+
+            last_response.raise_for_status()
+            return {"status": "unknown", "active_tasks": [], "cron_jobs": []}
 
     async def send_message(self, endpoint: str, message: str) -> str:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -87,6 +104,14 @@ class HermesAdapter(AgentAdapter):
             response = await client.delete(f"{endpoint}/crons/{name}")
             response.raise_for_status()
             return dict(response.json())
+
+
+def _join_url(endpoint: str, path: str) -> str:
+    base = endpoint.rstrip("/")
+    normalized_path = path if path.startswith("/") else f"/{path}"
+    if base.endswith("/v1") and normalized_path.startswith("/v1/"):
+        normalized_path = normalized_path[3:]
+    return f"{base}{normalized_path}"
 
 
 class OpenClawAdapter(AgentAdapter):

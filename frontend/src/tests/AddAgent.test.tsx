@@ -30,6 +30,7 @@ describe('AddAgent', () => {
 
   it('renders the form correctly', () => {
     renderComponent();
+    expect(screen.getByText(/SSH is the required connection/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/IP Address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/SSH Username/i)).toBeInTheDocument();
@@ -104,7 +105,7 @@ describe('AddAgent', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add Agent/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Agent API is unreachable/i)).toBeInTheDocument();
+      expect(screen.getByText(/API could not be reached/i)).toBeInTheDocument();
     });
   });
 });

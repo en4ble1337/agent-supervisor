@@ -6,7 +6,7 @@ Establish the base classes for agent communication (Adapters) and implement the 
 
 ## Prerequisites
 
-- [ ] Directive 002: Backend Core Setup (DB & Crypto) — Complete
+- [x] Directive 002: Backend Core Setup (DB & Crypto) — Complete
 
 ## References
 
@@ -26,7 +26,7 @@ Establish the base classes for agent communication (Adapters) and implement the 
 ### In Scope
 - Base `AgentAdapter` abstract class.
 - Stubbed `HermesAdapter` and `OpenClawAdapter` implementing a `validate_endpoint` method.
-- `SSHService.validate_connection` method to test SSH reachability and authentication without executing commands.
+- `SSHService.validate_connection` method to test SSH reachability, authentication, and ability to run a harmless `true` command.
 
 ### Out of Scope
 - SFTP file browsing or log tailing (handled later).
@@ -42,8 +42,11 @@ Establish the base classes for agent communication (Adapters) and implement the 
 
 ## Implementation Notes
 
-- SSH connections can hang. Ensure `asyncssh.connect` is wrapped with a strict 5-second timeout.
+- SSH connections can hang. Ensure `asyncssh.connect` and the validation command are wrapped with a strict 5-second timeout.
+- Development targets may include a host and port, such as `127.0.0.1:8022`, so the SSH service should support that form until a first-class SSH port field exists.
 
 ## Status: [x] Complete
 
 ## Notes
+
+- 2026-05-03 audit: Updated to match the hardened SSH validation behavior. A connection-only check was not enough to prove a usable operator session.

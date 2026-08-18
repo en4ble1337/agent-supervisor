@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+type JsonObject = Record<string, unknown>;
+
 export interface Agent {
   id: string;
   name: string;
@@ -24,11 +26,21 @@ export interface AgentStatus {
   status: string;
   active_tasks: Array<{ id: string; description: string }>;
   cron_jobs: Array<{ id: string; schedule: string }>;
+  intel?: {
+    source: string;
+    sections: Array<{ id: string; title: string; content: string }>;
+  } | null;
 }
 
 export interface FileInfo {
   name: string;
   type: string;
+}
+
+export interface FileContent {
+  path: string;
+  content: string;
+  encoding: string;
 }
 
 export interface ChatMessage {
@@ -67,6 +79,13 @@ export const getAgentFiles = async (id: string, path: string): Promise<FileInfo[
   return response.data;
 };
 
+export const getAgentFileContent = async (id: string, path: string): Promise<FileContent> => {
+  const response = await axios.get(`/api/agents/${id}/files/content`, {
+    params: { path },
+  });
+  return response.data;
+};
+
 export const getAgentLogs = async (id: string, logPath?: string): Promise<AgentLogs> => {
   const response = await axios.get(`/api/agents/${id}/logs`, {
     params: { log_path: logPath },
@@ -97,17 +116,26 @@ export const sendBroadcast = async (
   return response.data;
 };
 
-export const triggerAgentAction = async (id: string, action: string, params: Record<string, any> = {}): Promise<any> => {
+export const triggerAgentAction = async (
+  id: string,
+  action: string,
+  params: JsonObject = {},
+): Promise<JsonObject> => {
   const response = await axios.post(`/api/agents/${id}/actions`, { action, params });
   return response.data;
 };
 
-export const addAgentCron = async (id: string, name: string, schedule: string, command: string): Promise<any> => {
+export const addAgentCron = async (
+  id: string,
+  name: string,
+  schedule: string,
+  command: string,
+): Promise<JsonObject> => {
   const response = await axios.post(`/api/agents/${id}/crons`, { name, schedule, command });
   return response.data;
 };
 
-export const deleteAgentCron = async (id: string, name: string): Promise<any> => {
+export const deleteAgentCron = async (id: string, name: string): Promise<JsonObject> => {
   const response = await axios.delete(`/api/agents/${id}/crons/${name}`);
   return response.data;
 };

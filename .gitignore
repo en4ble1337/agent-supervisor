@@ -8,6 +8,8 @@ env/
 *.egg-info/
 dist/
 build/
+*.tsbuildinfo
+frontend/vite.config.d.ts
 
 # Environment
 .env
@@ -24,3 +26,4 @@ build/
 .tmp/
 *.log
 agents.db
+agent_supervisor.db

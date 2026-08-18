@@ -6,8 +6,8 @@ Build the Agent Detail shell and the Operations tab to display task lists and po
 
 ## Prerequisites
 
-- [ ] Directive 006: Add Agent UI — Complete
-- [ ] Directive 007: Agent Status API — Complete
+- [x] Directive 006: Add Agent UI — Complete
+- [x] Directive 007: Agent Status API — Complete
 
 ## References
 

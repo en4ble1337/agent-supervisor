@@ -6,8 +6,8 @@ Build the raw logs terminal view in the frontend to monitor agent output.
 
 ## Prerequisites
 
-- [ ] Directive 008: Agent Operational UI — Complete
-- [ ] Directive 009: SSH Files & Logs API — Complete
+- [x] Directive 008: Agent Operational UI — Complete
+- [x] Directive 009: SSH Files & Logs API — Complete
 
 ## References
 

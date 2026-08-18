@@ -6,7 +6,7 @@ Implement backend API proxying to fetch real-time agent tasks and operational st
 
 ## Prerequisites
 
-- [ ] Directive 004: Agent Registry API — Complete
+- [x] Directive 004: Agent Registry API — Complete
 
 ## References
 

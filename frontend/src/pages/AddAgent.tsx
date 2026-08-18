@@ -14,7 +14,7 @@ const RUNTIME_DEFAULTS = [
     name: 'Hermes',
     port: 8642,
     example: 'http://<ip>:8642',
-    note: 'Port 8642 is the agent API. Port 9119 is the built-in web dashboard (do not use for this field).',
+    note: 'Use the expected API URL here. If Hermes has not exposed it yet, SSH onboarding can still continue.',
     color: '#79c0ff',
   },
 ];
@@ -54,7 +54,7 @@ const AddAgent: React.FC = () => {
         if (code === 'SSH_AUTH_FAILED') {
           message = 'Invalid SSH credentials or unreachable.';
         } else if (code === 'AGENT_UNREACHABLE') {
-          message = 'Agent API is unreachable.';
+          message = 'API could not be reached. Confirm the endpoint or continue with SSH diagnostics after registration.';
         }
       }
       setError(message);
@@ -68,7 +68,7 @@ const AddAgent: React.FC = () => {
       <div className="w-full max-w-lg bg-surface border border-border rounded-lg p-6 flex flex-col gap-6">
         <header>
           <h2 className="text-2xl font-bold text-accent">Add Agent</h2>
-          <p className="text-muted text-sm">Register a new agent via SSH</p>
+          <p className="text-muted text-sm">SSH is the required connection; API reachability can be diagnosed after onboarding.</p>
         </header>
 
         {error && (
@@ -142,7 +142,7 @@ const AddAgent: React.FC = () => {
                 onClick={() => setShowDefaults(v => !v)}
                 className="text-xs text-accent hover:text-blue-300 transition-colors flex items-center gap-1"
               >
-                <span>{showDefaults ? '▾' : '▸'}</span>
+                <span>{showDefaults ? 'v' : '>'}</span>
                 Runtime Defaults
               </button>
             </div>
@@ -154,7 +154,7 @@ const AddAgent: React.FC = () => {
               value={formData.api_endpoint}
               onChange={handleChange}
               className="bg-background border border-border text-text text-sm rounded focus:ring-accent focus:border-accent block w-full p-2"
-              placeholder="e.g. http://10.0.0.5:18789 (OpenClaw) or :8642 (Hermes)"
+              placeholder="e.g. http://10.0.0.5:8642 (Hermes)"
             />
             {showDefaults && (
               <div id="runtime-defaults-panel" className="mt-2 rounded border border-border bg-[#161b22] p-3 flex flex-col gap-3">

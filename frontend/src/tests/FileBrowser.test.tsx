@@ -5,6 +5,7 @@ import * as api from '../api';
 
 vi.mock('../api', () => ({
   getAgentFiles: vi.fn(),
+  getAgentFileContent: vi.fn(),
 }));
 
 describe('FileBrowser', () => {
@@ -15,6 +16,11 @@ describe('FileBrowser', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(api.getAgentFileContent).mockResolvedValue({
+      path: 'README.md',
+      content: '# Readme\nMock file body',
+      encoding: 'utf-8',
+    });
   });
 
   it('renders files and navigates directories', async () => {
@@ -40,5 +46,20 @@ describe('FileBrowser', () => {
 
     expect(await screen.findByText('main.py')).toBeInTheDocument();
     expect(screen.queryByText('README.md')).not.toBeInTheDocument();
+  });
+
+  it('loads and displays file content when a file is selected', async () => {
+    vi.mocked(api.getAgentFiles).mockResolvedValue(mockFiles);
+
+    render(<FileBrowser agentId="123" />);
+
+    expect(await screen.findByText('README.md')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('README.md'));
+
+    await waitFor(() => {
+      expect(api.getAgentFileContent).toHaveBeenCalledWith('123', '/README.md');
+    });
+
+    expect(screen.getByText(/Mock file body/)).toBeInTheDocument();
   });
 });

@@ -4,14 +4,27 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from backend.core.config import settings
 from backend.core.database import get_db
 from backend.models.agent import Agent
 from backend.models.chat import ChatMessage
-from backend.schemas.agent_schemas import AgentStatusResponse
+from backend.schemas.agent_schemas import AgentRuntimeIntel, AgentStatusResponse
 from backend.schemas.chat_schemas import ChatMessageCreate, ChatMessageResponse
 from backend.services.agent_service import HermesAdapter
+from backend.services.crypto_service import CryptoService
+from backend.services.ssh_service import SSHService
 
 router = APIRouter()
+ssh_service = SSHService()
+crypto_service = CryptoService(settings.ENCRYPTION_KEY)
+
+
+async def _safe_collect_runtime_intel(agent: Agent, password: str) -> AgentRuntimeIntel | None:
+    try:
+        data = await ssh_service.collect_runtime_intel(agent.ip_address, agent.ssh_username, password)
+        return AgentRuntimeIntel.model_validate(data)
+    except Exception:
+        return None
 
 
 @router.get("/{id}/status", response_model=AgentStatusResponse)
@@ -31,17 +44,48 @@ async def get_agent_status(
     adapter = HermesAdapter()
     try:
         status_data = await adapter.get_status(agent.api_endpoint)
+        try:
+            password = crypto_service.decrypt(agent.ssh_password)
+        except Exception:
+            runtime_intel = None
+        else:
+            runtime_intel = await _safe_collect_runtime_intel(agent, password)
     except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail={"code": "AGENT_UNREACHABLE", "message": f"Failed to fetch status from agent: {e!s}"},
-        ) from e
+        try:
+            password = crypto_service.decrypt(agent.ssh_password)
+            diagnostics = await ssh_service.inspect_runtime(agent.ip_address, agent.ssh_username, password)
+            runtime_intel = await _safe_collect_runtime_intel(agent, password)
+        except Exception as ssh_exc:
+            raise HTTPException(
+                status_code=502,
+                detail={"code": "AGENT_UNREACHABLE", "message": f"Failed to fetch status from agent: {e!s}"},
+            ) from ssh_exc
+
+        diagnostic_lines = [str(diagnostics.get("summary", "Native API is unreachable."))]
+        api_hint = diagnostics.get("api_hint")
+        if api_hint:
+            diagnostic_lines.append(str(api_hint))
+        processes = diagnostics.get("processes") or []
+        listeners = diagnostics.get("listeners") or []
+        if processes:
+            diagnostic_lines.append("Processes: " + " | ".join(str(line) for line in processes[:3]))
+        if listeners:
+            diagnostic_lines.append("Listeners: " + " | ".join(str(line) for line in listeners[:3]))
+
+        return AgentStatusResponse(
+            id=uuid.UUID(agent.id),
+            status="api_unreachable",
+            active_tasks=[{"id": "ssh-diagnostics", "description": "\n".join(diagnostic_lines)}],
+            cron_jobs=[],
+            intel=runtime_intel,
+        )
 
     return AgentStatusResponse(
         id=uuid.UUID(agent.id),
         status=status_data.get("status", "unknown"),
         active_tasks=status_data.get("active_tasks", []),
         cron_jobs=status_data.get("cron_jobs", []),
+        intel=runtime_intel,
     )
 
 

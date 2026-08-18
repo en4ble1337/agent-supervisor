@@ -13,6 +13,13 @@ describe('OperationsTab', () => {
     status: 'online',
     active_tasks: [{ id: 't1', description: 'Working on SEO' }],
     cron_jobs: [{ id: 'c1', schedule: '0 * * * *' }],
+    intel: {
+      source: 'ssh-cli',
+      sections: [
+        { id: 'hermes-status', title: 'Hermes Status', content: 'Gateway Service: running' },
+        { id: 'hermes-sessions', title: 'Sessions', content: 'Research  2h ago  20260503_abc' },
+      ],
+    },
   };
 
   beforeEach(() => {
@@ -27,6 +34,20 @@ describe('OperationsTab', () => {
     expect(await screen.findByText(/online/i)).toBeInTheDocument();
     expect(screen.getByText('Working on SEO')).toBeInTheDocument();
     expect(screen.getByText('0 * * * *')).toBeInTheDocument();
+    expect(screen.getByText(/Runtime Intel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gateway Service: running/i)).toBeInTheDocument();
+    expect(screen.getByText(/Research\s+2h ago/i)).toBeInTheDocument();
+  });
+
+  it('does not render direct control forms in the observability view', async () => {
+    vi.mocked(api.getAgentStatus).mockResolvedValue(mockStatus);
+
+    render(<OperationsTab agentId="123" />);
+
+    expect(await screen.findByText(/Runtime Intel/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Quick Actions/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Action name/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add Cron Job/i)).not.toBeInTheDocument();
   });
 
   it('refreshes data when refresh button is clicked', async () => {

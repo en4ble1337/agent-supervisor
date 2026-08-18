@@ -151,12 +151,14 @@ async def test_create_agent_logs_ssh_validation_exception(
 @pytest.mark.asyncio
 @patch("backend.api.agents.ssh_service.validate_connection")
 @patch("backend.api.agents.HermesAdapter.validate_endpoint")
-async def test_create_agent_api_failed(mock_validate_api, mock_validate_ssh, async_client: AsyncClient):
+async def test_create_agent_api_failed_still_registers_after_ssh_success(
+    mock_validate_api, mock_validate_ssh, async_client: AsyncClient
+):
     mock_validate_ssh.return_value = True
     mock_validate_api.return_value = False
 
     payload = {
-        "name": "Failed API Agent",
+        "name": "SSH Reachable API Disabled Agent",
         "ip_address": "10.0.0.5",
         "ssh_username": "admin",
         "ssh_password": "password",
@@ -165,5 +167,8 @@ async def test_create_agent_api_failed(mock_validate_api, mock_validate_ssh, asy
     }
 
     response = await async_client.post("/api/agents", json=payload)
-    assert response.status_code == 502
-    assert response.json()["error"]["code"] == "AGENT_UNREACHABLE"
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "SSH Reachable API Disabled Agent"
+    assert data["api_endpoint"] == "http://10.0.0.5:8000"
+    assert "ssh_password" not in data

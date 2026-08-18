@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -10,18 +10,13 @@ from backend.models.agent import Agent
 from backend.services.crypto_service import CryptoService
 
 
-@pytest.mark.asyncio
-@patch("backend.api.ssh.ssh_service.list_directory")
-async def test_get_agent_files_success(mock_list, async_client: AsyncClient, db_session: AsyncSession):
-    mock_list.return_value = [{"name": "file1.txt", "type": "file"}]
-
-    # Encrypt a dummy password
+async def create_ssh_agent(db_session: AsyncSession, *, agent_id: str | None = None) -> str:
     cs = CryptoService(settings.ENCRYPTION_KEY)
     encrypted_pwd = cs.encrypt("password")
 
-    agent_id = str(uuid.uuid4())
+    resolved_id = agent_id or str(uuid.uuid4())
     agent = Agent(
-        id=agent_id,
+        id=resolved_id,
         name="SSH Agent",
         ip_address="10.0.0.1",
         ssh_username="admin",
@@ -31,43 +26,98 @@ async def test_get_agent_files_success(mock_list, async_client: AsyncClient, db_
     )
     db_session.add(agent)
     await db_session.commit()
+    return resolved_id
 
-    response = await async_client.get(f"/api/agents/{agent_id}/files?path=/tmp")
+
+@pytest.mark.asyncio
+@patch("backend.api.ssh.ssh_service.list_directory")
+@patch("backend.api.ssh.ssh_service.resolve_workspace_root", new_callable=AsyncMock, create=True)
+async def test_get_agent_files_success(
+    mock_resolve_workspace, mock_list, async_client: AsyncClient, db_session: AsyncSession
+):
+    mock_resolve_workspace.return_value = "/home/admin/.hermes/workspaces"
+    mock_list.return_value = [{"name": "file1.txt", "type": "file"}]
+
+    agent_id = await create_ssh_agent(db_session)
+
+    response = await async_client.get(f"/api/agents/{agent_id}/files")
 
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["name"] == "file1.txt"
-    mock_list.assert_called_once()
+    mock_resolve_workspace.assert_awaited_once_with("10.0.0.1", "admin", "password")
+    mock_list.assert_awaited_once_with("10.0.0.1", "admin", "password", "/home/admin/.hermes/workspaces")
+
+
+@pytest.mark.asyncio
+@patch("backend.api.ssh.ssh_service.list_directory")
+@patch("backend.api.ssh.ssh_service.resolve_workspace_root", new_callable=AsyncMock, create=True)
+async def test_get_agent_files_resolves_relative_paths_under_workspace(
+    mock_resolve_workspace, mock_list, async_client: AsyncClient, db_session: AsyncSession
+):
+    mock_resolve_workspace.return_value = "/home/admin/.hermes/workspaces"
+    mock_list.return_value = []
+    agent_id = await create_ssh_agent(db_session)
+
+    response = await async_client.get(f"/api/agents/{agent_id}/files", params={"path": "reports"})
+
+    assert response.status_code == 200
+    mock_list.assert_awaited_once_with("10.0.0.1", "admin", "password", "/home/admin/.hermes/workspaces/reports")
+
+
+@pytest.mark.asyncio
+@patch("backend.api.ssh.ssh_service.list_directory")
+@patch("backend.api.ssh.ssh_service.resolve_workspace_root", new_callable=AsyncMock, create=True)
+async def test_get_agent_files_rejects_traversal(
+    mock_resolve_workspace, mock_list, async_client: AsyncClient, db_session: AsyncSession
+):
+    agent_id = await create_ssh_agent(db_session)
+
+    response = await async_client.get(f"/api/agents/{agent_id}/files", params={"path": "../etc"})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    mock_resolve_workspace.assert_not_called()
+    mock_list.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("backend.api.ssh.ssh_service.read_file")
+@patch("backend.api.ssh.ssh_service.resolve_workspace_root", new_callable=AsyncMock, create=True)
+async def test_get_agent_file_content_success(
+    mock_resolve_workspace, mock_read, async_client: AsyncClient, db_session: AsyncSession
+):
+    mock_resolve_workspace.return_value = "/home/admin/.hermes/workspaces"
+    mock_read.return_value = "# Daily Notes\nAll systems nominal."
+    agent_id = await create_ssh_agent(db_session)
+
+    response = await async_client.get(f"/api/agents/{agent_id}/files/content", params={"path": "notes.md"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "path": "notes.md",
+        "content": "# Daily Notes\nAll systems nominal.",
+        "encoding": "utf-8",
+    }
+    mock_read.assert_awaited_once_with("10.0.0.1", "admin", "password", "/home/admin/.hermes/workspaces/notes.md")
 
 
 @pytest.mark.asyncio
 @patch("backend.api.ssh.ssh_service.read_log_file")
-async def test_get_agent_logs_success(mock_read, async_client: AsyncClient, db_session: AsyncSession):
+@patch("backend.api.ssh.ssh_service.resolve_log_path", new_callable=AsyncMock, create=True)
+async def test_get_agent_logs_success(mock_resolve_log, mock_read, async_client: AsyncClient, db_session: AsyncSession):
+    mock_resolve_log.return_value = "/home/admin/.hermes/logs/gateway.log"
     mock_read.return_value = "log content"
 
-    # Encrypt a dummy password
-    cs = CryptoService(settings.ENCRYPTION_KEY)
-    encrypted_pwd = cs.encrypt("password")
-
-    agent_id = str(uuid.uuid4())
-    agent = Agent(
-        id=agent_id,
-        name="Log Agent",
-        ip_address="10.0.0.2",
-        ssh_username="admin",
-        ssh_password=encrypted_pwd,
-        api_endpoint="http://10",
-        business_group="Acme",
-    )
-    db_session.add(agent)
-    await db_session.commit()
+    agent_id = await create_ssh_agent(db_session)
 
     response = await async_client.get(f"/api/agents/{agent_id}/logs")
 
     assert response.status_code == 200
     assert response.json()["logs"] == "log content"
-    mock_read.assert_called_once()
+    mock_resolve_log.assert_awaited_once_with("10.0.0.1", "admin", "password")
+    mock_read.assert_awaited_once_with("10.0.0.1", "admin", "password", "/home/admin/.hermes/logs/gateway.log", lines=100)
 
 
 @pytest.mark.asyncio

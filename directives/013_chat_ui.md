@@ -6,8 +6,8 @@ Build the direct 1-on-1 chat interface to communicate with agents.
 
 ## Prerequisites
 
-- [ ] Directive 008: Agent Operational UI — Complete
-- [ ] Directive 012: Messaging API — Complete
+- [x] Directive 008: Agent Operational UI — Complete
+- [x] Directive 012: Messaging API — Complete
 
 ## References
 

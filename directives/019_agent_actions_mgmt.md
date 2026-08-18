@@ -6,8 +6,8 @@ Extend the dashboard to not only view but also manage (create/delete) tasks and 
 
 ## Prerequisites
 
-- [ ] Directive 007: Agent Status API — Complete
-- [ ] Directive 008: Agent Detail UI — Complete
+- [x] Directive 007: Agent Status API — Complete
+- [x] Directive 008: Agent Detail UI — Complete
 
 ## Scope
 
@@ -25,4 +25,8 @@ Extend the dashboard to not only view but also manage (create/delete) tasks and 
 - [ ] Operator can add a new scheduled job and see it appear in the cron list.
 - [ ] All new code has corresponding tests in `tests/`
 
-## Status: [x] Incomplete / [x] Complete
+## Status: [x] Complete / [ ] Real Runtime Verified
+
+## Notes
+
+- 2026-05-03 audit: Backend and UI paths exist against the mock/assumed adapter shape. This still needs real Hermes/OpenClaw API verification before treating action or cron management as safe operational control.

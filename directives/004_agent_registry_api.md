@@ -6,7 +6,7 @@ Implement the database models and REST endpoints for registering, storing, and l
 
 ## Prerequisites
 
-- [ ] Directive 003: SSH & Agent Adapter Foundation — Complete
+- [x] Directive 003: SSH & Agent Adapter Foundation — Complete
 
 ## References
 

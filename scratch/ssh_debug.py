@@ -1,15 +1,16 @@
 import asyncio
+
 import asyncssh
-import sys
+
 
 async def test_ssh():
     ip = "10.1.20.191"
     user = "openclaw"
     pw = "n0d3!"
     
-    print(f"--- SSH Debug Tool ---")
+    print("--- SSH Debug Tool ---")
     print(f"Target: {user}@{ip}")
-    print(f"Testing connection...")
+    print("Testing connection...")
     
     try:
         async with asyncio.wait_for(asyncssh.connect(
@@ -22,14 +23,14 @@ async def test_ssh():
             result = await conn.run("whoami", check=True)
             print(f"Remote user: {result.stdout.strip()}")
             
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("ERROR: Connection timed out (10s). The IP might be unreachable or firewalled.")
     except asyncssh.PermissionDenied:
         print("ERROR: Permission Denied. Username or password incorrect.")
     except asyncssh.HostKeyNotVerifiable:
         print("ERROR: Host key not verifiable.")
     except Exception as e:
-        print(f"ERROR: {type(e).__name__}: {str(e)}")
+        print(f"ERROR: {type(e).__name__}: {e!s}")
 
 if __name__ == "__main__":
     asyncio.run(test_ssh())

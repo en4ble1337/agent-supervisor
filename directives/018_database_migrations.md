@@ -6,7 +6,7 @@ Set up Alembic to manage database schema evolution for the SQLite agent registry
 
 ## Prerequisites
 
-- [ ] Directive 002: Backend Core Setup — Complete
+- [x] Directive 002: Backend Core Setup — Complete
 
 ## References
 
@@ -26,7 +26,12 @@ Set up Alembic to manage database schema evolution for the SQLite agent registry
 ## Acceptance Criteria
 
 - [ ] `alembic upgrade head` successfully creates the `agents` table.
+- [ ] Initial migration includes every currently persisted model (`agents`, `chat_messages`, and any later connection-profile fields).
 - [ ] Migration history is tracked and versioned.
 - [ ] Documentation provided for creating new migrations.
 
-## Status: [x] Incomplete / [x] Complete
+## Status: [ ] Complete / [x] Migration Present / [ ] Runbook Verified
+
+## Notes
+
+- 2026-05-03 audit: The initial migration exists and includes `agents` and `chat_messages`, but there is no operator runbook proving when/how migrations are applied for local and Docker startup.

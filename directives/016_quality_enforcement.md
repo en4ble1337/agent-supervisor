@@ -31,4 +31,8 @@ Configure and enforce code quality tools, linters, and type checkers across the 
 - [ ] `npm run lint` passes for the frontend.
 - [ ] Documentation exists explaining how to run these tools locally.
 
-## Status: [x] Complete
+## Status: [ ] Complete / [x] Core Checks Present / [ ] Pre-commit and Prettier Complete
+
+## Notes
+
+- 2026-05-03 audit: `scripts/check_quality.ps1` now passes Ruff, mypy, backend tests, frontend lint, TypeScript, and frontend tests. The directive still overclaims because there is no checked-in pre-commit configuration and no Prettier setup/documentation.

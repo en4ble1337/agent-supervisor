@@ -24,11 +24,23 @@ class AgentResponse(AgentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AgentIntelSection(BaseModel):
+    id: str
+    title: str
+    content: str
+
+
+class AgentRuntimeIntel(BaseModel):
+    source: str
+    sections: list[AgentIntelSection]
+
+
 class AgentStatusResponse(BaseModel):
     id: UUID
     status: str
     active_tasks: list[Any]
     cron_jobs: list[Any]
+    intel: AgentRuntimeIntel | None = None
 
 
 class AgentActionRequest(BaseModel):

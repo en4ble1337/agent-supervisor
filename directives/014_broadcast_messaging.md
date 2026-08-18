@@ -6,13 +6,14 @@ Implement the capability to send a single message or command to multiple agents 
 
 ## Prerequisites
 
-- [ ] Directive 012: Messaging API — Complete
-- [ ] Directive 013: Frontend Chat Interface — Complete
+- [x] Directive 012: Messaging API — Complete
+- [x] Directive 013: Frontend Chat Interface — Complete
 
 ## References
 
 **PRD:**
 - Phase 4: Advanced Operations (Extended)
+- Note: PRD also lists multi-agent broadcasting as out of scope for MVP. This directive is therefore an extended/optional control-plane feature, not MVP readiness work.
 
 **ARCH.md:**
 - API Contracts: POST /api/broadcast
@@ -38,3 +39,7 @@ Implement the capability to send a single message or command to multiple agents 
 - [ ] `pytest tests/ -v` passes
 
 ## Status: [x] Complete
+
+## Notes
+
+- 2026-05-03 audit: This is intentionally outside the MVP scope. Before production use, add safety UX around target selection and operator confirmation so accidental cross-agent commands are harder to send.

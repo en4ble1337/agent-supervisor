@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileInfo, getAgentFiles } from '../api';
+import { FileContent, FileInfo, getAgentFileContent, getAgentFiles } from '../api';
 
 interface FileBrowserProps {
   agentId: string;
@@ -10,6 +10,9 @@ const FileBrowser: React.FC<FileBrowserProps> = ({ agentId }) => {
   const [currentPath, setCurrentPath] = useState<string>('/');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileContent | null>(null);
+  const [fileLoading, setFileLoading] = useState<boolean>(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const fetchFiles = useCallback(async (path: string) => {
     setLoading(true);
@@ -18,6 +21,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({ agentId }) => {
       const data = await getAgentFiles(agentId, path);
       setFiles(data);
       setCurrentPath(path);
+      setSelectedFile(null);
     } catch (err) {
       console.error(err);
       setError('Failed to fetch directory contents.');
@@ -31,13 +35,31 @@ const FileBrowser: React.FC<FileBrowserProps> = ({ agentId }) => {
     fetchFiles('/');
   }, [fetchFiles]);
 
+  const getChildPath = useCallback((fileName: string) => (
+    currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`
+  ), [currentPath]);
+
+  const loadFileContent = async (fileName: string) => {
+    const filePath = getChildPath(fileName);
+    setFileLoading(true);
+    setFileError(null);
+    try {
+      const content = await getAgentFileContent(agentId, filePath);
+      setSelectedFile(content);
+    } catch (err) {
+      console.error(err);
+      setSelectedFile(null);
+      setFileError('Failed to fetch file contents.');
+    } finally {
+      setFileLoading(false);
+    }
+  };
+
   const navigateTo = (fileName: string, type: string) => {
     if (type === 'directory') {
-      const newPath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
-      fetchFiles(newPath);
+      fetchFiles(getChildPath(fileName));
     } else {
-      // For MVP, just alert or show a placeholder for file viewing
-      alert(`File viewing for ${fileName} not implemented yet.`);
+      void loadFileContent(fileName);
     }
   };
 
@@ -109,6 +131,32 @@ const FileBrowser: React.FC<FileBrowserProps> = ({ agentId }) => {
           </table>
         )}
       </div>
+
+      {(fileLoading || fileError || selectedFile) && (
+        <section className="bg-surface border border-border rounded-lg overflow-hidden">
+          <header className="bg-background border-b border-border px-4 py-2 flex justify-between items-center">
+            <span className="text-sm font-mono text-accent">{selectedFile?.path || 'Loading file...'}</span>
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="text-xs text-muted hover:text-text transition-colors"
+              type="button"
+            >
+              Close
+            </button>
+          </header>
+          <div className="p-4 max-h-[420px] overflow-auto bg-black">
+            {fileLoading ? (
+              <div className="text-muted italic text-sm">Reading remote file...</div>
+            ) : fileError ? (
+              <div className="text-error text-sm">{fileError}</div>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words text-success text-xs font-mono leading-relaxed">
+                {selectedFile?.content || ''}
+              </pre>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

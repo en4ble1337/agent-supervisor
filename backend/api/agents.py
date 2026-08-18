@@ -62,8 +62,9 @@ async def create_agent(agent_in: AgentCreate, db: AsyncSession = Depends(get_db)
     adapter = HermesAdapter()
     is_api_valid = await adapter.validate_endpoint(agent_in.api_endpoint)
     if not is_api_valid:
-        raise HTTPException(
-            status_code=502, detail={"code": "AGENT_UNREACHABLE", "message": "Agent API is unreachable"}
+        logger.warning(
+            "Agent API validation failed for %s, but SSH validation passed; registering for SSH-first diagnostics",
+            agent_in.api_endpoint,
         )
 
     # Encrypt password

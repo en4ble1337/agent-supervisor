@@ -6,8 +6,8 @@ Integrate a professional file browser to navigate the agent's remote workspace v
 
 ## Prerequisites
 
-- [ ] Directive 008: Agent Operational UI — Complete
-- [ ] Directive 009: SSH Files & Logs API — Complete
+- [x] Directive 008: Agent Operational UI — Complete
+- [x] Directive 009: SSH Files & Logs API — Complete
 
 ## References
 
@@ -18,12 +18,12 @@ Integrate a professional file browser to navigate the agent's remote workspace v
 - Directory Structure: `frontend/src/components/FileBrowser.tsx`
 
 **RESEARCH.md:**
-- Libraries: `chonky`
+- Libraries: `chonky` was considered. The current MVP uses a native dense table and inline preview; Chonky remains an optional future enhancement.
 
 ## Scope
 
 ### In Scope
-- Integration of the `chonky` file browser UI component in the Files tab.
+- Read-only file browser UI component in the Files tab.
 - Fetching directory contents via `GET /api/agents/{id}/files`.
 - Click-to-view functionality for raw text files.
 
@@ -33,8 +33,8 @@ Integrate a professional file browser to navigate the agent's remote workspace v
 ## Acceptance Criteria
 
 - [ ] Files tab displays the agent's workspace directory tree natively.
-- [ ] Double-clicking a folder navigates into it (triggers a new API call).
-- [ ] Clicking a text/csv file opens a read-only modal/view with its contents.
+- [ ] Clicking a folder navigates into it (triggers a new API call).
+- [ ] Clicking a text/csv/markdown file opens a read-only view with its contents.
 - [ ] Loading states are handled cleanly to account for SSH latency.
 - [ ] All new code has corresponding tests in `tests/`
 - [ ] `npm run test` passes
@@ -42,3 +42,5 @@ Integrate a professional file browser to navigate the agent's remote workspace v
 ## Status: [x] Complete
 
 ## Notes
+
+- 2026-05-03 audit: The original directive required Chonky and double-click behavior, but the shipped implementation is a tested native table with single-click navigation and inline previews. This is acceptable for MVP, but a richer file-browser library can be added later if needed.

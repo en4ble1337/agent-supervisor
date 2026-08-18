@@ -1,22 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { addAgentCron, deleteAgentCron, AgentStatus, getAgentStatus, triggerAgentAction } from '../api';
+import { AgentStatus, getAgentStatus } from '../api';
 
 interface OperationsTabProps {
   agentId: string;
 }
 
+const HEALTHY_STATES = new Set(['ok', 'online', 'idle', 'running']);
+
 const OperationsTab: React.FC<OperationsTabProps> = ({ agentId }) => {
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionInProgress, setActionInProgress] = useState(false);
-
-  // Form states
-  const [actionName, setActionName] = useState('');
-  const [cronName, setCronName] = useState('');
-  const [cronSchedule, setCronSchedule] = useState('');
-  const [cronCommand, setCronCommand] = useState('');
 
   const fetchStatus = useCallback(async () => {
     setError(null);
@@ -32,73 +27,23 @@ const OperationsTab: React.FC<OperationsTabProps> = ({ agentId }) => {
   }, [agentId]);
 
   useEffect(() => {
-    fetchStatus();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchStatus();
 
-    // 15 minute polling
     const interval = setInterval(fetchStatus, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchStatus]);
-
-  const handleTriggerAction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!actionName) return;
-
-    setActionInProgress(true);
-    setError(null);
-    try {
-      await triggerAgentAction(agentId, actionName);
-      setActionName('');
-      await fetchStatus();
-    } catch (err) {
-      console.error(err);
-      setError('Failed to trigger action.');
-    } finally {
-      setActionInProgress(false);
-    }
-  };
-
-  const handleAddCron = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cronName || !cronSchedule || !cronCommand) return;
-
-    setActionInProgress(true);
-    setError(null);
-    try {
-      await addAgentCron(agentId, cronName, cronSchedule, cronCommand);
-      setCronName('');
-      setCronSchedule('');
-      setCronCommand('');
-      await fetchStatus();
-    } catch (err) {
-      console.error(err);
-      setError('Failed to add cron job.');
-    } finally {
-      setActionInProgress(false);
-    }
-  };
-
-  const handleDeleteCron = async (name: string) => {
-    if (!window.confirm(`Are you sure you want to delete cron job "${name}"?`)) return;
-
-    setActionInProgress(true);
-    setError(null);
-    try {
-      await deleteAgentCron(agentId, name);
-      await fetchStatus();
-    } catch (err) {
-      console.error(err);
-      setError('Failed to delete cron job.');
-    } finally {
-      setActionInProgress(false);
-    }
-  };
 
   if (loading && !status) {
     return <div className="text-muted font-mono">Loading operational status...</div>;
   }
 
+  const state = status?.status || 'unknown';
+  const isHealthy = HEALTHY_STATES.has(state.toLowerCase());
+  const intelSections = status?.intel?.sections || [];
+
   return (
-    <div className="flex flex-col gap-8 pb-8">
+    <div className="flex flex-col gap-6 pb-8">
       {error && (
         <div className="bg-[#f8514920] border border-error text-error px-4 py-2 rounded text-sm flex justify-between items-center">
           <span>{error}</span>
@@ -108,124 +53,86 @@ const OperationsTab: React.FC<OperationsTabProps> = ({ agentId }) => {
         </div>
       )}
 
-      {/* State Section */}
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-accent">Overall State</h3>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-surface border border-border rounded p-4">
+          <p className="text-xs uppercase text-muted tracking-widest mb-2">State</p>
+          <div className="flex items-center gap-3">
+            <span className={`w-3 h-3 rounded-full ${isHealthy ? 'bg-success' : 'bg-warning'}`} />
+            <span className="capitalize font-mono text-lg">{state}</span>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded p-4">
+          <p className="text-xs uppercase text-muted tracking-widest mb-2">Active Tasks</p>
+          <p className="font-mono text-lg">{status?.active_tasks.length || 0}</p>
+        </div>
+        <div className="bg-surface border border-border rounded p-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase text-muted tracking-widest mb-2">Cron Jobs</p>
+            <p className="font-mono text-lg">{status?.cron_jobs.length || 0}</p>
+          </div>
           <button
             onClick={fetchStatus}
-            disabled={actionInProgress}
-            className="text-xs px-3 py-1 bg-surface border border-border rounded hover:bg-border transition-colors flex items-center gap-2 disabled:opacity-50"
+            disabled={loading}
+            className="text-xs px-3 py-1 bg-background border border-border rounded hover:bg-border transition-colors disabled:opacity-50"
           >
-            <span>Refresh</span>
+            Refresh
           </button>
-        </div>
-        <div className="bg-surface border border-border rounded p-4 flex items-center gap-4">
-          <div className={`w-3 h-3 rounded-full ${status?.status === 'online' ? 'bg-success' : 'bg-warning'}`}></div>
-          <span className="capitalize font-mono">{status?.status || 'Unknown'}</span>
         </div>
       </section>
 
-      {/* Quick Actions Section */}
       <section>
-        <h3 className="text-lg font-bold text-accent mb-4">Quick Actions</h3>
-        <form onSubmit={handleTriggerAction} className="flex gap-2">
-          <input
-            type="text"
-            value={actionName}
-            onChange={(e) => setActionName(e.target.value)}
-            placeholder="Action name (e.g., restart, clear_cache)"
-            className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm font-mono focus:border-accent outline-none"
-            disabled={actionInProgress}
-          />
-          <button
-            type="submit"
-            disabled={actionInProgress || !actionName}
-            className="px-4 py-2 bg-accent text-background font-bold rounded hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
-          >
-            Trigger
-          </button>
-        </form>
+        <h3 className="text-lg font-bold text-accent mb-3">Runtime Intel</h3>
+        {intelSections.length === 0 ? (
+          <div className="bg-surface border border-border rounded p-4 text-sm text-muted">
+            No SSH CLI intel returned for this agent yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            {intelSections.map((section) => (
+              <article key={section.id} className="bg-surface border border-border rounded overflow-hidden">
+                <header className="px-3 py-2 bg-background border-b border-border flex justify-between items-center">
+                  <h4 className="text-sm font-bold text-text">{section.title}</h4>
+                  <span className="text-[10px] uppercase tracking-widest text-muted">{status?.intel?.source}</span>
+                </header>
+                <pre className="p-3 max-h-72 overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-text font-mono">
+                  {section.content}
+                </pre>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Active Tasks Section */}
-      <section>
-        <h3 className="text-lg font-bold text-accent mb-4">Active Tasks</h3>
-        <div className="flex flex-col gap-2">
-          {status?.active_tasks.length === 0 ? (
-            <p className="text-muted text-sm italic">No active tasks.</p>
-          ) : (
-            status?.active_tasks.map((task) => (
-              <div key={task.id} className="bg-surface border border-border rounded p-3 text-sm font-mono">
-                {task.description}
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* Cron Jobs Section */}
-      <section>
-        <h3 className="text-lg font-bold text-accent mb-4">Cron Jobs</h3>
-        
-        {/* Add Cron Form */}
-        <form onSubmit={handleAddCron} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-          <input
-            type="text"
-            value={cronName}
-            onChange={(e) => setCronName(e.target.value)}
-            placeholder="Job Name"
-            className="bg-background border border-border rounded px-3 py-2 text-sm font-mono outline-none focus:border-accent"
-            disabled={actionInProgress}
-          />
-          <input
-            type="text"
-            value={cronSchedule}
-            onChange={(e) => setCronSchedule(e.target.value)}
-            placeholder="Schedule (*/5 * * * *)"
-            className="bg-background border border-border rounded px-3 py-2 text-sm font-mono outline-none focus:border-accent"
-            disabled={actionInProgress}
-          />
-          <input
-            type="text"
-            value={cronCommand}
-            onChange={(e) => setCronCommand(e.target.value)}
-            placeholder="Command"
-            className="bg-background border border-border rounded px-3 py-2 text-sm font-mono outline-none focus:border-accent"
-            disabled={actionInProgress}
-          />
-          <button
-            type="submit"
-            disabled={actionInProgress || !cronName || !cronSchedule || !cronCommand}
-            className="md:col-span-3 px-4 py-2 bg-surface border border-border rounded hover:bg-border transition-colors font-bold disabled:opacity-50 text-sm"
-          >
-            Add Cron Job
-          </button>
-        </form>
-
-        <div className="flex flex-col gap-2">
-          {status?.cron_jobs.length === 0 ? (
-            <p className="text-muted text-sm italic">No scheduled cron jobs.</p>
-          ) : (
-            status?.cron_jobs.map((job) => (
-              <div
-                key={job.id}
-                className="bg-surface border border-border rounded p-3 text-sm font-mono flex justify-between items-center group"
-              >
-                <div className="flex flex-col">
-                  <span className="font-bold">{job.id}</span>
-                  <span className="text-muted text-xs">{job.schedule}</span>
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <div>
+          <h3 className="text-lg font-bold text-accent mb-3">Active Tasks</h3>
+          <div className="flex flex-col gap-2">
+            {status?.active_tasks.length === 0 ? (
+              <p className="text-muted text-sm italic">No active tasks.</p>
+            ) : (
+              status?.active_tasks.map((task) => (
+                <div key={task.id} className="bg-surface border border-border rounded p-3 text-sm font-mono">
+                  {task.description}
                 </div>
-                <button
-                  onClick={() => handleDeleteCron(job.id)}
-                  disabled={actionInProgress}
-                  className="text-error opacity-0 group-hover:opacity-100 transition-opacity hover:underline text-xs"
-                >
-                  Delete
-                </button>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold text-accent mb-3">Cron Jobs</h3>
+          <div className="flex flex-col gap-2">
+            {status?.cron_jobs.length === 0 ? (
+              <p className="text-muted text-sm italic">No scheduled cron jobs.</p>
+            ) : (
+              status?.cron_jobs.map((job) => (
+                <div key={job.id} className="bg-surface border border-border rounded p-3 text-sm font-mono">
+                  <span className="font-bold">{job.id}</span>
+                  <span className="block text-muted text-xs">{job.schedule}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
     </div>

@@ -6,7 +6,7 @@ Develop a lightweight "Mock Agent" utility that simulates both the Hermes/OpenCl
 
 ## Prerequisites
 
-- [ ] Directive 003: SSH & Agent Adapter Foundation — Complete
+- [x] Directive 003: SSH & Agent Adapter Foundation — Complete
 
 ## References
 
@@ -20,7 +20,7 @@ Develop a lightweight "Mock Agent" utility that simulates both the Hermes/OpenCl
 
 ### In Scope
 - A Python script using `FastAPI` to simulate agent API endpoints (`/status`, `/chat`).
-- Integration of a mock SSH server (using `asyncssh` server capabilities).
+- Integration of a mock SSH/SFTP server (using `asyncssh` server capabilities).
 - Dockerfile to run the mock agent as a container in the `docker-compose` environment.
 
 ### Out of Scope
@@ -31,5 +31,10 @@ Develop a lightweight "Mock Agent" utility that simulates both the Hermes/OpenCl
 - [ ] Dashboard can "Add" a Mock Agent and successfully validate SSH/API connections.
 - [ ] Mock Agent returns predictable JSON responses for status and chat.
 - [ ] Integration tests can run against the Mock Agent without requiring a real VM.
+- [ ] Integration tests exercise real mock SSH validation, SFTP directory listing, and SFTP file reading without patching SSH out.
 
 ## Status: [x] Complete
+
+## Notes
+
+- 2026-05-03 audit: The mock runtime now supports a deterministic `/opt/hermes/workspace` over SFTP and configurable local API/SSH ports for host-based testing.

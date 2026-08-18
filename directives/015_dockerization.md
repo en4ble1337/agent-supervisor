@@ -6,7 +6,7 @@ Containerize the backend, frontend, and development utilities to ensure consiste
 
 ## Prerequisites
 
-- [ ] Directive 006: Add Agent UI — Complete (Base functionality should be working)
+- [x] Directive 006: Add Agent UI — Complete (Base functionality should be working)
 
 ## References
 
@@ -29,8 +29,14 @@ Containerize the backend, frontend, and development utilities to ensure consiste
 ## Acceptance Criteria
 
 - [ ] `docker-compose up --build` starts the entire stack successfully.
+- [ ] Backend container applies Alembic migrations or the runbook clearly instructs the operator to run them before first use.
 - [ ] Frontend is accessible on port 3000 (or configured port).
 - [ ] Backend API is accessible and connects to the persisted SQLite volume.
+- [ ] Mock Agent is reachable from the backend container by API and SSH/SFTP.
 - [ ] Docker images follow best practices (small size, non-root user).
 
-## Status: [x] Complete
+## Status: [ ] Complete / [x] Code Present / [ ] Fresh Docker Smoke Verified
+
+## Notes
+
+- 2026-05-03 audit: Docker files exist, but this directive should not be called fully complete until a fresh `docker-compose up --build` smoke test proves the frontend, backend, SQLite migrations, and mock-agent network path all work together.

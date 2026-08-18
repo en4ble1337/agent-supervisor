@@ -6,7 +6,7 @@ Build the "Add Agent" form with robust client-side validation and specific error
 
 ## Prerequisites
 
-- [ ] Directive 005: Frontend Foundation & Global Dashboard — Complete
+- [x] Directive 005: Frontend Foundation & Global Dashboard — Complete
 
 ## References
 

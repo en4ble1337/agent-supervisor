@@ -1,4 +1,6 @@
 import asyncio
+import os
+from pathlib import Path
 
 import asyncssh
 import uvicorn
@@ -7,6 +9,7 @@ from fastapi import Body, FastAPI
 # --- FastAPI Mock API ---
 
 app = FastAPI(title="Mock Agent API")
+DEFAULT_WORKSPACE_ROOT = "/opt/hermes/workspace"
 
 @app.get("/status")
 async def get_status():
@@ -43,32 +46,51 @@ class MockSSHServer(asyncssh.SSHServer):
 
 def handle_client(process):
     command = process.command
-    if command and command.startswith('tail'):
+    if command == "true":
+        pass
+    elif command and command.startswith('tail'):
         process.stdout.write('Mock Log: System booted.\nMock Log: All systems go.\n')
     else:
         process.stdout.write('Mock SSH Shell - Type exit to quit\n')
     process.exit(0)
 
-async def start_ssh_server():
+def prepare_mock_filesystem(filesystem_root: Path) -> Path:
+    workspace = filesystem_root / DEFAULT_WORKSPACE_ROOT.lstrip("/")
+    reports = workspace / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("# Mock workspace notes\nAll systems nominal.\n", encoding="utf-8")
+    (reports / "daily.csv").write_text("name,status\nmock,online\n", encoding="utf-8")
+    return filesystem_root
+
+async def start_ssh_server(host="", port=8022, filesystem_root=None):
     # Load or generate a host key
     key = asyncssh.generate_private_key('ssh-rsa')
-    await asyncssh.create_server(
-        MockSSHServer, '', 8022,
+    root = prepare_mock_filesystem(Path(filesystem_root or "/tmp/agent-supervisor-mock").resolve())
+    return await asyncssh.create_server(
+        MockSSHServer, host, port,
         server_host_keys=[key],
-        process_factory=handle_client
+        process_factory=handle_client,
+        sftp_factory=lambda chan: asyncssh.SFTPServer(chan, chroot=os.fsencode(root)),
     )
 
 # --- Combined Runner ---
 
 async def main():
+    api_port = int(os.getenv("MOCK_AGENT_API_PORT", "8000"))
+    ssh_port = int(os.getenv("MOCK_AGENT_SSH_PORT", "8022"))
+
     # Start SSH in background
-    await start_ssh_server()
-    print("Mock SSH server started on port 8022")
-    
+    acceptor = await start_ssh_server(port=ssh_port)
+    print(f"Mock SSH server started on port {ssh_port}")
+
     # Run FastAPI
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000)
+    config = uvicorn.Config(app, host="0.0.0.0", port=api_port)
     server = uvicorn.Server(config)
-    await server.serve()
+    try:
+        await server.serve()
+    finally:
+        acceptor.close()
+        await acceptor.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())

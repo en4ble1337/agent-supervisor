@@ -19,7 +19,7 @@ Initialize the FastAPI backend structure, set up the asynchronous SQLite databas
 - Directory Structure: `backend/core/config.py`, `backend/core/database.py`, `backend/services/crypto_service.py`
 
 **RESEARCH.md:**
-- Libraries: `cryptography` (Fernet for AES-256-GCM)
+- Libraries: `cryptography` (`AESGCM` for AES-256-GCM credential encryption; legacy Fernet decrypt support is allowed only for old local records)
 
 ## Scope
 
@@ -43,8 +43,11 @@ Initialize the FastAPI backend structure, set up the asynchronous SQLite databas
 ## Implementation Notes
 
 - Use Pydantic `BaseSettings` for configuration management in `config.py`.
-- Ensure `ENCRYPTION_KEY` is validated for the correct length/format expected by Fernet.
+- Ensure `ENCRYPTION_KEY` decodes to a 32-byte AES-256 key.
+- New encrypted values must use the `v1:` AES-GCM token format. Legacy Fernet tokens may be readable during transition, but new writes must not use Fernet.
 
 ## Status: [x] Complete
 
 ## Notes
+
+- 2026-05-03 audit: Updated to reflect the current AES-256-GCM implementation. The original Fernet wording conflicted with ARCH.md.

@@ -6,7 +6,7 @@ Set up the React application foundation and build the global dashboard view disp
 
 ## Prerequisites
 
-- [ ] Directive 004: Agent Registry API — Complete
+- [x] Directive 004: Agent Registry API — Complete
 
 ## References
 

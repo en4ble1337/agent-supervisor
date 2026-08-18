@@ -5,6 +5,7 @@ import {
   createAgent, 
   getAgentStatus, 
   getAgentFiles, 
+  getAgentFileContent,
   getAgentLogs, 
   sendMessage, 
   getChatHistory, 
@@ -71,6 +72,18 @@ describe('API Service', () => {
 
       expect(axios.get).toHaveBeenCalledWith('/api/agents/1/files', { params: { path: '/tmp' } });
       expect(result).toEqual(mockFiles);
+    });
+  });
+
+  describe('getAgentFileContent', () => {
+    it('fetches readable file content by path', async () => {
+      const mockContent = { path: 'notes.md', content: '# Notes', encoding: 'utf-8' };
+      vi.mocked(axios.get).mockResolvedValueOnce({ data: mockContent });
+
+      const result = await getAgentFileContent('1', '/notes.md');
+
+      expect(axios.get).toHaveBeenCalledWith('/api/agents/1/files/content', { params: { path: '/notes.md' } });
+      expect(result).toEqual(mockContent);
     });
   });
 
